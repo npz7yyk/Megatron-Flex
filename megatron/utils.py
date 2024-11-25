@@ -262,8 +262,17 @@ def is_rank_0():
 def get_parameters_in_billions(model):
     gpus_per_model = torch.distributed.get_world_size(group=mpu.get_model_parallel_group())
 
-    approx_parameters_in_billions = sum([sum([p.ds_numel if hasattr(p,'ds_id') else  p.nelement() for p in model_module.parameters()])
-                                        for model_module in model])
+    args = get_args()
+    if args.flextrain:
+        model_module = model[0]
+        layer_numel = model_module.para_coordinator._aligned_unit_numel / args.flextrain_config["checkpoint_interval"]
+        total_layer_numel = layer_numel * args.num_layers
+        non_layerwise_params = model_module.optimizer.non_layerwise_params
+        total_nonlayerwise_numel = sum([p.numel() for p in non_layerwise_params])
+        approx_parameters_in_billions = (total_layer_numel + total_nonlayerwise_numel)
+    else:
+        approx_parameters_in_billions = sum([sum([p.ds_numel if hasattr(p,'ds_id') else  p.nelement() for p in model_module.parameters()])
+                                            for model_module in model])
 
     return approx_parameters_in_billions*gpus_per_model/(1e9)
 
