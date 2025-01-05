@@ -4,8 +4,20 @@
   "steps_per_print": LOG_INTERVAL,
 
   "zero_optimization": {
-    "stage": ZERO_STAGE
+    "stage": ZERO_STAGE,
+    "offload_param": {
+      "device": "cpu",
+      "pin_memory": true
+    },
+    "overlap_comm": true,
+    "offload_optimizer": {
+      "device": "nvme",
+      "pin_memory": true,
+      "nvme_path": "/shared_ssd_storage/yikang/.cache"
+    }
   },
+
+  "data_types": { "grad_accum_dtype": "fp32" },
 
   "gradient_clipping": 1.0,
   "prescale_gradients": PRESCALE_GRAD,

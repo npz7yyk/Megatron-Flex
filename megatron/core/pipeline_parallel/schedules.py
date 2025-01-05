@@ -395,24 +395,37 @@ def forward_backward_no_pipelining(*,
 
     forward_data_store = []
     input_tensor, output_tensor_grad = None, None
+    import time
     with no_sync_func():
         for i in range(num_microbatches - 1):
+            t1 = time.time()
             output_tensor = forward_step(forward_step_func, data_iterator, model, num_microbatches,
                                          input_tensor, forward_data_store, config, collect_non_loss_data)
+            t2 = time.time()
             print_rank_by_rank(output_tensor)
+            print_rank_by_rank(f"forward_step time: {t2 - t1}")
             if not forward_only:
+                t1 = time.time()
                 backward_step(input_tensor, output_tensor, output_tensor_grad, model_type, config, model)
+                t2 = time.time()
+                print_rank_by_rank(f"backward_step time: {t2 - t1}")
     if args.deepspeed:
         model.set_gradient_accumulation_boundary(True)
 
     # Run computation for last microbatch out of context handler (want to
     # synchronize gradients).
+    t1 = time.time()
     output_tensor = forward_step(forward_step_func, data_iterator, model, num_microbatches,
                                  input_tensor, forward_data_store, config, collect_non_loss_data)
+    t2 = time.time()
     print_rank_by_rank(output_tensor)
+    print_rank_by_rank(f"forward_step time: {t2 - t1}")
 
     if not forward_only:
+        t1 = time.time()
         backward_step(input_tensor, output_tensor, output_tensor_grad, model_type, config, model)
+        t2 = time.time()
+        print_rank_by_rank(f"backward_step time: {t2 - t1}")
 
     return forward_data_store
 

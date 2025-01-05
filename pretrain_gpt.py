@@ -168,7 +168,17 @@ def flextrain_model_provider(pre_process=True, post_process=True):
     args = get_args()
     config = core_transformer_config_from_args(args)
     from megatron.model.transformer import ParallelTransformerLayer
-    with flextrain.Init(layer_class=ParallelTransformerLayer):
+
+    # Custom parameter grouping function
+    # Copied from megatron/optimizer/__init__.py line 40
+    def param_grouping_func(name: str, param: torch.Tensor) -> int:
+        return name.endswith(".bias") or len(param.shape) == 1
+
+    with flextrain.Init(
+        layer_class=ParallelTransformerLayer,
+        num_layers=config.num_layers,
+        param_grouping_func=param_grouping_func
+    ):
         model = GPTModel(
             config=config,
             num_tokentypes=0,
@@ -204,7 +214,7 @@ def model_provider(pre_process=True, post_process=True):
     config = core_transformer_config_from_args(args)
     with deepspeed.zero.Init(sequence_data_parallel_group=mpu.get_sequence_data_parallel_group(),
                              remote_device=None if args.remote_device == 'none' else args.remote_device,
-                             config_dict_or_path=args.deepspeed_config,
+                             config_dict_or_path=args.deepspeed_config_dict,
                              enabled=args.zero_stage == 3,
                              mpu=mpu):
         if args.deepspeed and not args.no_pipeline_parallel:

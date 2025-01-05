@@ -275,6 +275,10 @@ def pretrain(train_valid_test_dataset_provider,
                                    test_data_iterator, model,
                                    iteration, process_non_loss_data_func, config,
                                    verbose=True, write_to_tensorboard=not args.skip_train, test=True)
+
+    if iteration == 10:
+        exit()
+
     return model
 
 
@@ -588,7 +592,7 @@ def setup_model_and_optimizer(model_provider_func,
         opt_param_scheduler = get_optimizer_param_scheduler(optimizer)
 
     if args.flextrain:
-        print_rank_0("Flextrain is enabled.")
+        print_rank_0("FlexTrain is enabled.")
         model = flextrain.initialize(
             model=model[0],
             optimizer=optimizer
@@ -1221,6 +1225,7 @@ def train(forward_step_func, model, optimizer, opt_param_scheduler,
                        optimizer,
                        opt_param_scheduler,
                        config)
+        torch.cuda.empty_cache()
         iteration += 1
         args.iteration = iteration
         new_samples = mpu.get_data_parallel_world_size() * \
@@ -1321,6 +1326,8 @@ def train(forward_step_func, model, optimizer, opt_param_scheduler,
             print_datetime('exiting program at iteration {}'.format(iteration))
             sys.exit()
 
+        if iteration == 20:
+            sys.exit()
 
     return iteration
 
